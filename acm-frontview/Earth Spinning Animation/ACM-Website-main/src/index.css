@@ -1,0 +1,217 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Oxanium:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #060913;
+  color: #f1f5f9;
+  font-family: 'Oxanium', 'Orbitron', 'Share Tech Mono', sans-serif;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+/* Custom cyber scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #060913;
+}
+::-webkit-scrollbar-thumb {
+  background: #00f0ff55;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00f0ffaa;
+}
+
+.font-orbitron {
+  font-family: 'Orbitron', 'Oxanium', sans-serif;
+}
+
+.font-oxanium {
+  font-family: 'Oxanium', 'Orbitron', sans-serif;
+}
+
+.font-share-tech {
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.font-display {
+  font-family: 'Orbitron', 'Oxanium', sans-serif;
+}
+
+.font-mono {
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.font-sans {
+  font-family: 'Oxanium', 'Orbitron', sans-serif;
+}
+
+.font-momo {
+  font-family: 'Orbitron', 'Oxanium', sans-serif;
+}
+
+.neon-glow-cyan {
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.8), 0 0 20px rgba(0, 240, 255, 0.5), 0 0 40px rgba(0, 240, 255, 0.3);
+}
+
+.neon-glow-magenta {
+  text-shadow: 0 0 10px rgba(255, 0, 127, 0.8), 0 0 20px rgba(255, 0, 127, 0.5), 0 0 40px rgba(255, 0, 127, 0.3);
+}
+
+.box-glow-cyan {
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3), inset 0 0 15px rgba(0, 240, 255, 0.2);
+}
+
+.box-glow-magenta {
+  box-shadow: 0 0 15px rgba(255, 0, 127, 0.3), inset 0 0 15px rgba(255, 0, 127, 0.2);
+}
+
+@keyframes lightStreak {
+  0% {
+    transform: translateY(-100%) scaleY(0.4);
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(180%) scaleY(1.4);
+    opacity: 0;
+  }
+}
+
+.animate-speed-streak {
+  animation: lightStreak 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes mouseWheelMove {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(12px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(15px);
+    opacity: 0;
+  }
+}
+
+.animate-mouse-wheel {
+  animation: mouseWheelMove 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* Staggered Hero Title Block Entrance Keyframes */
+@keyframes heroBadgeSlideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroWordBlurUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes heroTaglineFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scrollBreathingPulse {
+  0%, 100% {
+    opacity: 0.78;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+.animate-hero-badge {
+  animation: heroBadgeSlideDown 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+}
+
+.animate-hero-word-1 {
+  animation: heroWordBlurUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.02s both;
+}
+
+.animate-hero-word-2 {
+  animation: heroWordBlurUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.10s both;
+}
+
+.animate-hero-tagline {
+  animation: heroTaglineFadeIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.22s both;
+}
+
+.animate-breathing-pulse {
+  animation: scrollBreathingPulse 2.8s ease-in-out infinite;
+}
+
+/* Digital City Styles */
+.city-sky {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(circle at 50% 31%, #286ec7 0%, #0e3d7b 26%, #061632 76%);
+}
+
+.city-stars {
+  position: absolute;
+  inset: 0 0 35%;
+  z-index: 2;
+  background-image:
+    radial-gradient(circle at 17% 32%, #d8f5ff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 42% 26%, #fff 0 1px, transparent 1.5px),
+    radial-gradient(circle at 71% 45%, #c9f3ff 0 1px, transparent 1.5px),
+    radial-gradient(circle at 84% 22%, #fff 0 1px, transparent 1.5px),
+    radial-gradient(circle at 28% 18%, #c9f3ff 0 1px, transparent 1.5px),
+    radial-gradient(circle at 62% 14%, #fff 0 1px, transparent 1.5px);
+}
+
+.city-message {
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.6px;
+  line-height: 1.55;
+  text-shadow: 0 0 12px #0b254b, 0 0 25px rgba(56, 223, 255, 0.6);
+}
+
+.city-gateway-copy {
+  text-shadow: 0 0 14px #55e4ff, 0 0 28px rgba(0, 240, 255, 0.7);
+}

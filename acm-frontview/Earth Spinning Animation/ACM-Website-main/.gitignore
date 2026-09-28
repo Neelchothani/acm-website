@@ -1,0 +1,39 @@
+# Dependencies & Build Outputs
+node_modules/
+dist/
+tsconfig.tsbuildinfo
+
+# OS & Editor
+.DS_Store
+.env
+.env.*
+.vscode/
+.idea/
+
+# Reference / Scratch Folders & Media
+ACM---Digital-City-main/
+events-district/
+friend_digital_city/
+globe-part/
+Intro Page.mp4
+public/
+
+# Unused Legacy Prototype Files
+src/components/Billboards.tsx
+src/components/CameraRail.tsx
+src/components/CityBuildings.tsx
+src/components/CloudsLayer.tsx
+src/components/EventModal.tsx
+src/components/EventsDistrictRotunda.tsx
+src/components/FriendDigitalCity.tsx
+src/components/HUD.tsx
+src/components/HeroNavMenu.tsx
+src/components/InfoModal.tsx
+src/components/InteractiveBillboards.tsx
+src/components/Road.tsx
+src/components/hyperspace/HolographicEventObject.tsx
+src/components/hyperspace/warpData.ts
+src/components/street/
+src/lib/eventsData.ts
+src/lib/palette.ts
+src/lib/textures.ts
