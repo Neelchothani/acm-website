@@ -11,7 +11,7 @@ const BUILDINGS = {
   events: { id: 'events', title: 'Events Building 07', streetFrame: 300, focalOrigin: '72% 52%' },
   connect: { id: 'connect', title: 'Connect Satellite Hub', streetFrame: 570, focalOrigin: '28% 52%' },
   editorial: { id: 'editorial', title: 'Editorial Digital Library', streetFrame: 570, focalOrigin: '72% 52%' },
-  headquarters: { id: 'headquarters', title: 'ACM Headquarters & Celestial Core', streetFrame: 839, focalOrigin: '50% 48%' }
+  headquarters: { id: 'headquarters', title: 'ACM Headquarters & Celestial Core', streetFrame: 899, focalOrigin: '50% 48%' }
 };
 
 export function App() {

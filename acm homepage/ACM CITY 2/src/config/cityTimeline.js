@@ -40,7 +40,7 @@ export const CITY_STOPS = {
   acmPlanet: {
     id: 'acmPlanet',
     progress: 1.0,
-    frame: 839,
+    frame: 899,
     range: [0.85, 1.0],
     title: 'ACM CELESTIAL CORE & HEADQUARTERS',
     subtitle: 'Global Headquarters & Planetary Computing Core',
@@ -53,15 +53,16 @@ export const CITY_STOPS = {
   }
 };
 
-export const DEPARTMENT_FRAMES = [300, 570, 839];
+export const DEPARTMENT_FRAMES = [300, 570, 899];
 export const SNAP_FRAME_THRESHOLD = 100;
 
 export const ENGINE_CONFIG = {
   videoPath: '/city.mp4',
   framesDir: '/frames',
-  totalFrames: 840,
+  totalFrames: 900,
   scrollHeightVh: 750,
   targetFps: 60,
   departmentFrames: DEPARTMENT_FRAMES,
   snapFrameThreshold: SNAP_FRAME_THRESHOLD
 };
+
