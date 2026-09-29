@@ -11,7 +11,7 @@ const BUILDINGS = {
   events: { id: 'events', title: 'Events Building 07', streetFrame: 300, focalOrigin: '72% 52%' },
   connect: { id: 'connect', title: 'Connect Satellite Hub', streetFrame: 570, focalOrigin: '28% 52%' },
   editorial: { id: 'editorial', title: 'Editorial Digital Library', streetFrame: 570, focalOrigin: '72% 52%' },
-  headquarters: { id: 'headquarters', title: 'ACM Headquarters & Celestial Core', streetFrame: 839, focalOrigin: '50% 48%' }
+  headquarters: { id: 'headquarters', title: 'ACM Headquarters & Celestial Core', streetFrame: 899, focalOrigin: '50% 48%' }
 };
 
 export function App() {
@@ -118,11 +118,11 @@ export function App() {
       title: building.title
     });
 
-    // Clouds surge in from left & right, completely cloaking the screen at ~780ms
+    // Clouds surge in from left & right, completely cloaking the screen at ~1350ms
     setTimeout(() => {
       setViewMode('inside');
       window.parent.postMessage({ type: 'navigate', section: buildingId }, '*');
-    }, 780);
+    }, 1350);
   }, [cloudState.isCovering, cloudState.isExiting]);
 
   // Exit Current Building back to City Street: clouds part back outward
@@ -139,7 +139,7 @@ export function App() {
       engineRef.current.requestFrame(currentCityFrame);
     }
 
-    // After clouds part back outward to the sides (750ms), reset state
+    // After clouds part back outward to the sides (1250ms), reset state
     setTimeout(() => {
       setCloudState({
         isCovering: false,
@@ -147,7 +147,7 @@ export function App() {
         buildingId: null,
         title: ''
       });
-    }, 750);
+    }, 1250);
   }, [currentCityFrame]);
 
   // Listen for 'reset' message from root shell (user returned from a section)
@@ -219,7 +219,7 @@ export function App() {
         style={{
           transform: cloudState.isCovering ? 'scale(1.06)' : 'scale(1)',
           filter: cloudState.isCovering ? 'blur(4px) brightness(1.1)' : 'none',
-          transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.8s ease-out',
+          transition: 'transform 1.35s cubic-bezier(0.2, 0.8, 0.2, 1), filter 1.35s ease-out',
           willChange: 'transform, filter',
         }}
       />

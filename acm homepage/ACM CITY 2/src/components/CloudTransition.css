@@ -182,24 +182,24 @@
    ========================================================================== */
 
 .clouds-surging .cloud-ambient-wash {
-  animation: ambientWashIn 0.75s ease-out forwards;
+  animation: ambientWashIn 1.35s ease-out forwards;
 }
 
 .clouds-surging .cloud-bank-left {
-  animation: sweepFromLeft 0.78s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: sweepFromLeft 1.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .clouds-surging .cloud-bank-right {
-  animation: sweepFromRight 0.78s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: sweepFromRight 1.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .clouds-surging .cloud-center-merge {
-  animation: mergeVeilIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  animation-delay: 0.35s;
+  animation: mergeVeilIn 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.55s;
 }
 
 .clouds-surging .cloud-mist-layer {
-  animation: mistFadeIn 0.75s ease-out forwards;
+  animation: mistFadeIn 1.35s ease-out forwards;
 }
 
 @keyframes sweepFromLeft {
@@ -255,23 +255,23 @@
 }
 
 .clouds-parting .cloud-bank-left {
-  animation: partToLeft 0.75s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+  animation: partToLeft 1.25s cubic-bezier(0.32, 0, 0.67, 0) forwards;
 }
 
 .clouds-parting .cloud-bank-right {
-  animation: partToRight 0.75s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+  animation: partToRight 1.25s cubic-bezier(0.32, 0, 0.67, 0) forwards;
 }
 
 .clouds-parting .cloud-center-merge {
-  animation: mergeVeilOut 0.5s ease-out forwards;
+  animation: mergeVeilOut 0.85s ease-out forwards;
 }
 
 .clouds-parting .cloud-ambient-wash {
-  animation: ambientWashOut 0.7s ease-out forwards;
+  animation: ambientWashOut 1.15s ease-out forwards;
 }
 
 .clouds-parting .cloud-mist-layer {
-  animation: ambientWashOut 0.7s ease-out forwards;
+  animation: ambientWashOut 1.15s ease-out forwards;
 }
 
 @keyframes partToLeft {
