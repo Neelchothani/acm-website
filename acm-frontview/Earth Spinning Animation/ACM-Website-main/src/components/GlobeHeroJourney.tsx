@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Globe from "./ui/globe";
 import DynamicAuroraBackground from "./DynamicAuroraBackground";
 import MumbaiDotRiseMarker from "./MumbaiDotRiseMarker";
 import { MUMBAI_DOT_RISE_CONFIG } from "./mumbaiDotRiseConfig";
+import { GLOBAL_HUBS, NETWORK_ARCS } from "./globalNetworkData";
+import GlobalNetworkOverlay from "./GlobalNetworkOverlay";
 import { ChevronDown } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -39,12 +41,53 @@ export default function GlobeHeroJourney({
   const ambientPhiRef = useRef<number>(
     MUMBAI_DOT_RISE_CONFIG.rotation.initialPhiRad
   );
+
+  const [userTheta, setUserTheta] = useState<number>(0.28);
+  const userThetaRef = useRef<number>(0.28);
+
+  const autoRotateRef = useRef<boolean>(true);
+
+  const [pingActive, setPingActive] = useState<boolean>(false);
+  const pingTimerRef = useRef<number | null>(null);
+
   const animFrameRef = useRef<number | null>(null);
   const isDotRiseActiveRef = useRef(false);
   const currentSpeedMultRef = useRef(1.0);
   const scrollProgressRef = useRef(scrollProgress);
   scrollProgressRef.current = scrollProgress;
 
+  // Drag interaction state
+  const dragRef = useRef({
+    isDown: false,
+    startX: 0,
+    startY: 0,
+    startPhi: 0,
+    startTheta: 0,
+    lastX: 0,
+    lastTime: 0,
+    velPhi: 0,
+  });
+  const resumeTimerRef = useRef<number | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+
+  // Arcs and Markers formatted for Cobe
+  const cobeMarkers = useMemo(() => {
+    return GLOBAL_HUBS.map((h) => ({
+      location: h.location,
+      size: h.size,
+      color: h.color,
+    }));
+  }, []);
+
+  const cobeArcs = useMemo(() => {
+    return NETWORK_ARCS.map((a) => ({
+      from: a.from,
+      to: a.to,
+      color: a.color,
+    }));
+  }, []);
+
+  // Continuous animation loop: handles auto-rotation & drag inertia
   useEffect(() => {
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let prefersReducedMotion = motionQuery.matches;
@@ -60,8 +103,17 @@ export default function GlobeHeroJourney({
 
       const currentScroll = scrollProgressRef.current;
 
-      // When at hero top (< 0.008), freely rotate Earth continuously
-      if (currentScroll < 0.008) {
+      // Apply drag momentum inertia when finger/mouse released
+      if (!dragRef.current.isDown && Math.abs(dragRef.current.velPhi) > 0.001) {
+        ambientPhiRef.current = (ambientPhiRef.current + dragRef.current.velPhi * delta) % (2 * Math.PI);
+        dragRef.current.velPhi *= 0.94; // friction decay
+        setAmbientPhi(ambientPhiRef.current);
+      } else if (
+        !dragRef.current.isDown &&
+        autoRotateRef.current &&
+        currentScroll < 0.008
+      ) {
+        // Normal continuous rotation when at hero top
         const targetMult =
           !prefersReducedMotion && isDotRiseActiveRef.current
             ? MUMBAI_DOT_RISE_CONFIG.rotation.holdSpeedMultiplier
@@ -72,7 +124,7 @@ export default function GlobeHeroJourney({
         const speed =
           MUMBAI_DOT_RISE_CONFIG.rotation.normalSpeedRadPerSec *
           currentSpeedMultRef.current;
-        
+
         ambientPhiRef.current = (ambientPhiRef.current + speed * delta) % (2 * Math.PI);
         setAmbientPhi(ambientPhiRef.current);
       }
@@ -83,9 +135,101 @@ export default function GlobeHeroJourney({
     animFrameRef.current = requestAnimationFrame(tick);
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+      if (pingTimerRef.current) clearTimeout(pingTimerRef.current);
       motionQuery.removeEventListener("change", onMotionChange);
     };
   }, []);
+
+  // Pointer drag event handlers
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (scrollProgressRef.current > 0.1) return;
+    dragRef.current = {
+      isDown: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      startPhi: ambientPhiRef.current,
+      startTheta: userThetaRef.current,
+      lastX: e.clientX,
+      lastTime: performance.now(),
+      velPhi: 0,
+    };
+    setIsDragging(true);
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current.isDown) return;
+    const now = performance.now();
+    const dt = Math.max(1, now - dragRef.current.lastTime) / 1000;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+
+    // Instant velocity calculation
+    const stepX = e.clientX - dragRef.current.lastX;
+    dragRef.current.velPhi = (-stepX * 0.005) / dt;
+    dragRef.current.lastX = e.clientX;
+    dragRef.current.lastTime = now;
+
+    // Update coordinates
+    const newPhi = dragRef.current.startPhi - dx * 0.005;
+    const newTheta = Math.max(-0.25, Math.min(0.55, dragRef.current.startTheta + dy * 0.003));
+
+    ambientPhiRef.current = newPhi;
+    setAmbientPhi(newPhi);
+    userThetaRef.current = newTheta;
+    setUserTheta(newTheta);
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    if (!dragRef.current.isDown) return;
+    dragRef.current.isDown = false;
+    setIsDragging(false);
+
+    // Gently pause then resume auto-rotation after 3.2s
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = window.setTimeout(() => {
+      dragRef.current.velPhi = 0;
+    }, 3200);
+  }, []);
+
+  // Smoothly rotate globe towards any target coordinate
+  const handleTargetLocation = useCallback((lat: number, lon: number) => {
+    const targetPhi = (1.5 * Math.PI) - (lon * Math.PI) / 180;
+    const targetTheta = Math.max(-0.25, Math.min(0.55, (lat * Math.PI) / 180));
+
+    const startPhi = ambientPhiRef.current;
+    const startTheta = userThetaRef.current;
+    let diffPhi = targetPhi - startPhi;
+    while (diffPhi < -Math.PI) diffPhi += 2 * Math.PI;
+    while (diffPhi > Math.PI) diffPhi -= 2 * Math.PI;
+
+    const startTime = performance.now();
+    const duration = 800;
+
+    const tween = (now: number) => {
+      const elapsed = now - startTime;
+      const p = Math.min(1, elapsed / duration);
+      const easeP = p * (2 - p);
+
+      ambientPhiRef.current = startPhi + diffPhi * easeP;
+      setAmbientPhi(ambientPhiRef.current);
+      userThetaRef.current = startTheta + (targetTheta - startTheta) * easeP;
+      setUserTheta(userThetaRef.current);
+
+      if (p < 1) {
+        requestAnimationFrame(tween);
+      }
+    };
+
+    requestAnimationFrame(tween);
+
+    // Trigger radar ping ripple
+    setPingActive(true);
+    if (pingTimerRef.current) clearTimeout(pingTimerRef.current);
+    pingTimerRef.current = window.setTimeout(() => setPingActive(false), 1600);
+  }, []);
+
 
   // Quintic smootherstep easing (C2 continuous: zero velocity & zero acceleration at boundaries)
   const smootherstep = (edge0: number, edge1: number, x: number) => {
@@ -145,12 +289,12 @@ export default function GlobeHeroJourney({
   }, [scrollProgress, ambientPhi]);
 
   const currentTheta = useMemo(() => {
-    const startTheta = 0.28;
+    const startTheta = userTheta;
     if (scrollProgress <= 0.005) return startTheta;
     if (scrollProgress >= 0.24) return TARGET_THETA;
     const lockWeight = smootherstep(0.005, 0.24, scrollProgress);
     return startTheta + (TARGET_THETA - startTheta) * lockWeight;
-  }, [scrollProgress]);
+  }, [scrollProgress, userTheta]);
 
   // ---------------------------------------------------------------------------
   // Stage 2: Smooth Cinematic Acceleration Dive into Mumbai
@@ -201,6 +345,7 @@ export default function GlobeHeroJourney({
         <DynamicAuroraBackground />
       </div>
 
+
       {/* -------------------------------------------------------------------- */}
       {/* Centered 3D Cobe Globe + 3D "Dot Rise" Mumbai Marker (z-10)          */}
       {/* -------------------------------------------------------------------- */}
@@ -222,11 +367,29 @@ export default function GlobeHeroJourney({
         >
           {/* Cobe WebGL Globe + Synchronized Three.js "Dot Rise" Overlay */}
           <div className="relative w-[85vw] max-w-[540px] sm:max-w-[620px] md:max-w-[700px] aspect-square flex items-center justify-center">
+            {/* Interactive Drag Shield over Earth */}
+            {scrollProgress < 0.1 && (
+              <div
+                className={`absolute inset-0 rounded-full z-15 pointer-events-auto ${
+                  isDragging ? "cursor-grabbing" : "cursor-grab"
+                }`}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                title="Drag to rotate Earth"
+              />
+            )}
+
             <Globe
               phi={currentPhi}
               theta={currentTheta}
               scale={OG_GLOBE_THEME.scale}
-              markers={[]}
+              markers={cobeMarkers}
+              arcs={cobeArcs}
+              arcColor={[0.0, 0.95, 1.0]}
+              arcWidth={1.5}
+              arcHeight={0.28}
               dark={OG_GLOBE_THEME.dark}
               diffuse={OG_GLOBE_THEME.diffuse}
               mapSamples={OG_GLOBE_THEME.mapSamples}
@@ -234,6 +397,16 @@ export default function GlobeHeroJourney({
               baseColor={OG_GLOBE_THEME.baseColor}
               markerColor={OG_GLOBE_THEME.markerColor}
               glowColor={OG_GLOBE_THEME.glowColor}
+            />
+
+            {/* Interactive Global Chapter Overlay */}
+            <GlobalNetworkOverlay
+              phi={currentPhi}
+              theta={currentTheta}
+              globeScale={OG_GLOBE_THEME.scale}
+              scrollProgress={scrollProgress}
+              onTargetLocation={handleTargetLocation}
+              pingActive={pingActive}
             />
 
             <MumbaiDotRiseMarker
@@ -250,12 +423,13 @@ export default function GlobeHeroJourney({
         </div>
       </div>
 
+
       {/* -------------------------------------------------------------------- */}
-      {/* Upper-Third Hero Title Block Layered Above Globe Horizon (z-20)      */}
+      {/* Upper-Third Hero Title Block Layered Above Globe Horizon (z-30)      */}
       {/* -------------------------------------------------------------------- */}
       {heroHeaderState.opacity > 0.01 && (
         <header
-          className="absolute inset-x-0 top-[2vh] sm:top-[2.5vh] z-20 flex flex-col items-center justify-center text-center px-4 sm:px-8 pointer-events-none select-none w-full"
+          className="absolute inset-x-0 top-[2vh] sm:top-[2.5vh] z-30 flex flex-col items-center justify-center text-center px-4 sm:px-8 pointer-events-none select-none w-full"
           style={{
             opacity: heroHeaderState.opacity,
             transform: `translate3d(0, ${heroHeaderState.translateY}px, 0)`,
