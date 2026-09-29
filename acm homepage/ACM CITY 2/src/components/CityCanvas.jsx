@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-export const CityCanvas = ({ canvasRef: externalRef }) => {
+export const CityCanvas = ({ canvasRef: externalRef, style = {} }) => {
   const internalRef = useRef(null);
   const ref = externalRef || internalRef;
 
@@ -33,7 +33,8 @@ export const CityCanvas = ({ canvasRef: externalRef }) => {
     <canvas
       ref={ref}
       id="acm-city-canvas"
-      style={{ display: 'block', position: 'fixed', top: 0, left: 0 }}
+      style={{ display: 'block', position: 'fixed', top: 0, left: 0, ...style }}
     />
   );
 };
+

@@ -1,0 +1,307 @@
+/* ==========================================================================
+   Volumetric Cloud Sweep Transition
+   Clouds surge in from both sides (left & right), converging to cover the
+   entire screen before redirection, and part outward upon return.
+   ========================================================================== */
+
+.cloud-transition-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: all; /* Block clicks during transition */
+  overflow: hidden;
+  user-select: none;
+}
+
+.cloud-svg-filter {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Ambient wash that tints the background as clouds approach */
+.cloud-ambient-wash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(230, 242, 255, 0.5) 0%, rgba(190, 220, 250, 0.3) 50%, transparent 80%);
+  opacity: 0;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+/* Base Cloud Bank Containers */
+.cloud-bank {
+  position: absolute;
+  top: -15vh;
+  bottom: -15vh;
+  width: 78vw;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.cloud-bank-left {
+  left: 0;
+  transform: translate3d(-105%, 0, 0);
+}
+
+.cloud-bank-right {
+  right: 0;
+  transform: translate3d(105%, 0, 0);
+}
+
+.cloud-mass-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  filter: blur(24px) drop-shadow(0 0 25px rgba(180, 215, 255, 0.6));
+}
+
+/* Organic billow puffs */
+.cloud-puff {
+  position: absolute;
+  border-radius: 50% 55% 45% 50% / 48% 52% 48% 52%;
+  background: radial-gradient(
+    circle at 45% 42%,
+    #ffffff 0%,
+    #f2f8ff 35%,
+    #d9ebfc 60%,
+    #bad9f9 78%,
+    rgba(175, 210, 245, 0) 95%
+  );
+  box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.9), 0 0 60px rgba(160, 205, 250, 0.4);
+  opacity: 0.96;
+}
+
+/* Left Bank Puffs Distribution */
+.puff-l1 { width: 55vw; height: 55vw; top: -10vw; left: -10vw; }
+.puff-l2 { width: 62vw; height: 58vw; top: 15vw; left: -5vw; }
+.puff-l3 { width: 58vw; height: 60vw; top: 38vw; left: -12vw; }
+.puff-l4 { width: 65vw; height: 65vw; top: 58vw; left: -8vw; }
+.puff-l5 { width: 45vw; height: 45vw; top: 8vw; left: 16vw; opacity: 0.98; }
+.puff-l6 { width: 50vw; height: 50vw; top: 32vw; left: 18vw; opacity: 0.98; }
+.puff-l7 { width: 48vw; height: 48vw; top: 54vw; left: 14vw; opacity: 0.97; }
+.puff-l8 { width: 35vw; height: 35vw; top: 26vw; left: 32vw; opacity: 0.95; }
+
+/* Right Bank Puffs Distribution */
+.puff-r1 { width: 55vw; height: 55vw; top: -10vw; right: -10vw; }
+.puff-r2 { width: 62vw; height: 58vw; top: 12vw; right: -5vw; }
+.puff-r3 { width: 60vw; height: 62vw; top: 36vw; right: -12vw; }
+.puff-r4 { width: 65vw; height: 65vw; top: 56vw; right: -8vw; }
+.puff-r5 { width: 46vw; height: 46vw; top: 6vw; right: 16vw; opacity: 0.98; }
+.puff-r6 { width: 52vw; height: 52vw; top: 30vw; right: 18vw; opacity: 0.98; }
+.puff-r7 { width: 48vw; height: 48vw; top: 52vw; right: 14vw; opacity: 0.97; }
+.puff-r8 { width: 36vw; height: 36vw; top: 24vw; right: 32vw; opacity: 0.95; }
+
+/* Leading Fog Tendrils (speed ahead into center) */
+.cloud-tendril {
+  position: absolute;
+  height: 22vh;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.95) 0%, rgba(220, 240, 255, 0.7) 40%, rgba(190, 225, 255, 0) 80%);
+  filter: blur(16px);
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.tendril-l1 { width: 50vw; top: 22vh; left: 35vw; transform: rotate(-4deg); }
+.tendril-l2 { width: 60vw; top: 48vh; left: 28vw; transform: rotate(3deg); }
+.tendril-l3 { width: 45vw; top: 72vh; left: 32vw; transform: rotate(-2deg); }
+
+.tendril-r1 { width: 52vw; top: 18vh; right: 34vw; transform: rotate(4deg); }
+.tendril-r2 { width: 58vw; top: 45vh; right: 28vw; transform: rotate(-3deg); }
+.tendril-r3 { width: 48vw; top: 68vh; right: 32vw; transform: rotate(2deg); }
+
+/* Center Merge Veil: Guarantees 100% full opaque coverage */
+.cloud-center-merge {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #f2f7ff 35%,
+    #e1effe 70%,
+    #cde4fc 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+/* Atmospheric floating mist flecks */
+.cloud-mist-layer {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.6) 0%, transparent 60%);
+  filter: blur(12px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* HUD Badge */
+.cloud-hud-label {
+  position: absolute;
+  bottom: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 22px;
+  background: rgba(12, 22, 38, 0.75);
+  border: 1px solid rgba(180, 220, 255, 0.6);
+  border-radius: 9999px;
+  backdrop-filter: blur(16px);
+  color: #ffffff;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  box-shadow: 0 4px 30px rgba(0, 50, 100, 0.35);
+  z-index: 10001;
+  pointer-events: none;
+  animation: cloudHudFade 0.4s ease-out forwards;
+}
+
+.cloud-hud-icon {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: pulse-glow 1s infinite alternate;
+}
+
+@keyframes cloudHudFade {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ==========================================================================
+   ANIMATIONS: SURGING (Entering - clouds rush in from both sides)
+   ========================================================================== */
+
+.clouds-surging .cloud-ambient-wash {
+  animation: ambientWashIn 0.75s ease-out forwards;
+}
+
+.clouds-surging .cloud-bank-left {
+  animation: sweepFromLeft 0.78s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.clouds-surging .cloud-bank-right {
+  animation: sweepFromRight 0.78s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.clouds-surging .cloud-center-merge {
+  animation: mergeVeilIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.35s;
+}
+
+.clouds-surging .cloud-mist-layer {
+  animation: mistFadeIn 0.75s ease-out forwards;
+}
+
+@keyframes sweepFromLeft {
+  0% {
+    transform: translate3d(-105%, 0, 0) scale(0.9);
+    opacity: 0.4;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes sweepFromRight {
+  0% {
+    transform: translate3d(105%, 0, 0) scale(0.9);
+    opacity: 0.4;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes mergeVeilIn {
+  0% { opacity: 0; }
+  50% { opacity: 0.45; }
+  100% { opacity: 1; }
+}
+
+@keyframes ambientWashIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes mistFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 0.85; }
+}
+
+/* ==========================================================================
+   ANIMATIONS: PARTING (Returning - clouds part back to both sides)
+   ========================================================================== */
+
+.clouds-parting {
+  pointer-events: none;
+}
+
+.clouds-parting .cloud-bank-left {
+  animation: partToLeft 0.75s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+}
+
+.clouds-parting .cloud-bank-right {
+  animation: partToRight 0.75s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+}
+
+.clouds-parting .cloud-center-merge {
+  animation: mergeVeilOut 0.5s ease-out forwards;
+}
+
+.clouds-parting .cloud-ambient-wash {
+  animation: ambientWashOut 0.7s ease-out forwards;
+}
+
+.clouds-parting .cloud-mist-layer {
+  animation: ambientWashOut 0.7s ease-out forwards;
+}
+
+@keyframes partToLeft {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(-110%, 0, 0) scale(0.92);
+    opacity: 0;
+  }
+}
+
+@keyframes partToRight {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(110%, 0, 0) scale(0.92);
+    opacity: 0;
+  }
+}
+
+@keyframes mergeVeilOut {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes ambientWashOut {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
