@@ -30,8 +30,9 @@ function Start-SubApp {
         [string]$Path
     )
     $absPath = Join-Path $rootDir $Path
-    if (-not (Test-Path $absPath)) {
-        Write-Warning "Path not found: $absPath — skipping $Title"
+    $pkgPath = Join-Path $absPath "package.json"
+    if (-not (Test-Path $pkgPath)) {
+        Write-Warning "package.json not found in $absPath — skipping $Title"
         return
     }
     Start-Process powershell -ArgumentList @(

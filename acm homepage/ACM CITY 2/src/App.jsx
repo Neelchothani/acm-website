@@ -1,23 +1,22 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { ImageSequenceEngine } from './engine/ImageSequenceEngine.js';
-import { BuildingEntryEngine } from './engine/BuildingEntryEngine.js';
 import { ScrollController } from './engine/ScrollController.js';
 import { CityCanvas } from './components/CityCanvas.jsx';
+import { CloudTransition } from './components/CloudTransition.jsx';
 import { ENGINE_CONFIG } from './config/cityTimeline.js';
 import './App.css';
 
 const BUILDINGS = {
-  research: { id: 'research', title: 'Research Building 06', streetFrame: 300, framesDir: '/frames_research' },
-  events: { id: 'events', title: 'Events Building 07', streetFrame: 300, framesDir: '/frames_events' },
-  connect: { id: 'connect', title: 'Connect Satellite Hub', streetFrame: 570, framesDir: '/frames_connect' },
-  editorial: { id: 'editorial', title: 'Editorial Digital Library', streetFrame: 570, framesDir: '/frames_editorial' },
-  headquarters: { id: 'headquarters', title: 'ACM Headquarters & Celestial Core', streetFrame: 839, framesDir: '/frames_headquarters' }
+  research: { id: 'research', title: 'Research Building 06', streetFrame: 300, focalOrigin: '28% 52%' },
+  events: { id: 'events', title: 'Events Building 07', streetFrame: 300, focalOrigin: '72% 52%' },
+  connect: { id: 'connect', title: 'Connect Satellite Hub', streetFrame: 570, focalOrigin: '28% 52%' },
+  editorial: { id: 'editorial', title: 'Editorial Digital Library', streetFrame: 570, focalOrigin: '72% 52%' },
+  headquarters: { id: 'headquarters', title: 'ACM Headquarters & Celestial Core', streetFrame: 899, focalOrigin: '50% 48%' }
 };
 
 export function App() {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
-  const buildingEnginesRef = useRef({});
   const scrollControllerRef = useRef(null);
 
   const [loadingState, setLoadingState] = useState({
@@ -28,8 +27,15 @@ export function App() {
   });
 
   const [currentCityFrame, setCurrentCityFrame] = useState(0);
-  const [viewMode, setViewMode] = useState('city'); // 'city' | 'entering' | 'inside' | 'exiting'
+  const [viewMode, setViewMode] = useState('city'); // 'city' | 'entering' | 'inside'
   const [activeBuildingId, setActiveBuildingId] = useState(null);
+
+  const [cloudState, setCloudState] = useState({
+    isCovering: false,
+    isExiting: false,
+    buildingId: null,
+    title: ''
+  });
 
   const savedScrollYRef = useRef(0);
 
@@ -55,18 +61,6 @@ export function App() {
 
     engine.setCanvas(canvasRef.current);
     engineRef.current = engine;
-
-    // 2. Initialize all 4 Building Entry Engines
-    const engines = {};
-    Object.values(BUILDINGS).forEach((b) => {
-      const bEngine = new BuildingEntryEngine({
-        totalFrames: 240,
-        framesDir: b.framesDir
-      });
-      bEngine.setCanvas(canvasRef.current);
-      engines[b.id] = bEngine;
-    });
-    buildingEnginesRef.current = engines;
 
     // Initialize City Frames
     engine.init().then((success) => {
@@ -98,83 +92,75 @@ export function App() {
     return () => {
       isMounted = false;
       engineRef.current?.destroy();
-      Object.values(buildingEnginesRef.current).forEach((e) => e.destroy());
       scrollControllerRef.current?.destroy();
     };
   }, []);
 
-  // Enter a Building
+  // Enter a Building with volumetric cloud sweep from both sides (~780ms)
   const handleEnterBuilding = useCallback((buildingId) => {
     const building = BUILDINGS[buildingId];
-    const bEngine = buildingEnginesRef.current[buildingId];
-    if (viewMode !== 'city' || !building || !bEngine) return;
+    if (cloudState.isCovering || cloudState.isExiting || !building) return;
 
     const targetY = scrollControllerRef.current?.getScrollYForFrame(building.streetFrame) ?? window.scrollY;
     savedScrollYRef.current = targetY;
     window.scrollTo(0, targetY);
 
-    const cityBitmap = engineRef.current?.getBitmap(building.streetFrame) || engineRef.current?.getBitmap(currentCityFrame);
+    if (engineRef.current) {
+      engineRef.current.requestFrame(building.streetFrame);
+    }
 
     setActiveBuildingId(buildingId);
     setViewMode('entering');
-
-    bEngine.playForward({
-      duration: 4500,
-      cityBitmap,
-      onComplete: () => {
-        setViewMode('inside');
-        // Signal the root shell to navigate to the section page
-        // The zoom animation has played — now transition the root to the section iframe
-        window.parent.postMessage({ type: 'navigate', section: buildingId }, '*');
-      }
+    setCloudState({
+      isCovering: true,
+      isExiting: false,
+      buildingId,
+      title: building.title
     });
-  }, [viewMode, currentCityFrame]);
 
-  // Exit Current Building back to City Street (internal — used for scroll/key exit)
+    // Clouds surge in from left & right, completely cloaking the screen at ~1350ms
+    setTimeout(() => {
+      setViewMode('inside');
+      window.parent.postMessage({ type: 'navigate', section: buildingId }, '*');
+    }, 1350);
+  }, [cloudState.isCovering, cloudState.isExiting]);
+
+  // Exit Current Building back to City Street: clouds part back outward
   const handleExitBuilding = useCallback(() => {
-    if (viewMode !== 'inside' || !activeBuildingId) return;
+    setViewMode('city');
+    setActiveBuildingId(null);
+    setCloudState((prev) => ({
+      ...prev,
+      isCovering: false,
+      isExiting: true
+    }));
 
-    const building = BUILDINGS[activeBuildingId];
-    const bEngine = buildingEnginesRef.current[activeBuildingId];
-    if (!building || !bEngine) return;
+    if (engineRef.current && currentCityFrame >= 0) {
+      engineRef.current.requestFrame(currentCityFrame);
+    }
 
-    const cityBitmap = engineRef.current?.getBitmap(building.streetFrame);
-    setViewMode('exiting');
-
-    bEngine.playReverse({
-      duration: 3500,
-      cityBitmap,
-      onComplete: () => {
-        const returnY = savedScrollYRef.current || scrollControllerRef.current?.getScrollYForFrame(building.streetFrame) || 0;
-        window.scrollTo(0, returnY);
-        setViewMode('city');
-        setActiveBuildingId(null);
-        engineRef.current?.requestFrame(building.streetFrame);
-      }
-    });
-  }, [viewMode, activeBuildingId]);
+    // After clouds part back outward to the sides (1250ms), reset state
+    setTimeout(() => {
+      setCloudState({
+        isCovering: false,
+        isExiting: false,
+        buildingId: null,
+        title: ''
+      });
+    }, 1250);
+  }, [currentCityFrame]);
 
   // Listen for 'reset' message from root shell (user returned from a section)
   useEffect(() => {
     const handleParentMessage = (e) => {
       if (!e.data || typeof e.data !== 'object') return;
       if (e.data.type === 'reset') {
-        // If we're in 'inside' view, play the exit animation back to city
-        if (viewMode === 'inside' && activeBuildingId) {
-          handleExitBuilding();
-        } else if (viewMode === 'entering') {
-          // Mid-animation: just reset state
-          setViewMode('city');
-          setActiveBuildingId(null);
-          if (engineRef.current && currentCityFrame >= 0) {
-            engineRef.current.requestFrame(currentCityFrame);
-          }
-        }
+        handleExitBuilding();
       }
     };
     window.addEventListener('message', handleParentMessage);
     return () => window.removeEventListener('message', handleParentMessage);
-  }, [viewMode, activeBuildingId, handleExitBuilding, currentCityFrame]);
+  }, [handleExitBuilding]);
 
   // Prevent scroll drift while inside or transitioning
   useEffect(() => {
@@ -190,63 +176,11 @@ export function App() {
     return () => window.removeEventListener('scroll', lockScroll);
   }, [viewMode]);
 
-  // Scroll in any direction / gesture / Escape to exit building back to street
-  useEffect(() => {
-    if (viewMode !== 'inside') return;
-
-    let touchStartY = null;
-
-    const handleWheel = (e) => {
-      if (Math.abs(e.deltaY) > 6 || Math.abs(e.deltaX) > 6) {
-        handleExitBuilding();
-      }
-    };
-
-    const handleTouchStart = (e) => {
-      if (e.touches.length > 0) {
-        touchStartY = e.touches[0].clientY;
-      }
-    };
-
-    const handleTouchMove = (e) => {
-      if (touchStartY === null || e.touches.length === 0) return;
-      const currentY = e.touches[0].clientY;
-      if (Math.abs(currentY - touchStartY) > 30) {
-        touchStartY = null;
-        handleExitBuilding();
-      }
-    };
-
-    const handleKeyDown = (e) => {
-      if (
-        e.key === 'Escape' ||
-        e.key === 'ArrowUp' ||
-        e.key === 'ArrowDown' ||
-        e.key === 'PageUp' ||
-        e.key === 'PageDown' ||
-        e.key === ' '
-      ) {
-        handleExitBuilding();
-      }
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: true });
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [viewMode, handleExitBuilding]);
-
   // Active view zone detections on street level
   const isSector02InView = viewMode === 'city' && currentCityFrame >= 200 && currentCityFrame <= 400; // Research & Events
   const isSector03InView = viewMode === 'city' && currentCityFrame >= 470 && currentCityFrame <= 670; // Connect & Editorial
   const isCoreInView = viewMode === 'city' && currentCityFrame >= 720; // ACM Headquarters & Celestial Core
+
 
   return (
     <div className={`acm-app mode-${viewMode}`}>
@@ -280,10 +214,25 @@ export function App() {
         </div>
       )}
 
-      <CityCanvas canvasRef={canvasRef} />
+      <CityCanvas
+        canvasRef={canvasRef}
+        style={{
+          transform: cloudState.isCovering ? 'scale(1.06)' : 'scale(1)',
+          filter: cloudState.isCovering ? 'blur(4px) brightness(1.1)' : 'none',
+          transition: 'transform 1.35s cubic-bezier(0.2, 0.8, 0.2, 1), filter 1.35s ease-out',
+          willChange: 'transform, filter',
+        }}
+      />
+
+      {/* Volumetric Cloud Sweep Transition */}
+      <CloudTransition
+        isCovering={cloudState.isCovering}
+        isExiting={cloudState.isExiting}
+        buildingTitle={cloudState.title}
+      />
 
       {/* Sector 02 Click Targets: Frame ~300 */}
-      {isSector02InView && (
+      {isSector02InView && !cloudState.isCovering && !cloudState.isExiting && (
         <>
           {/* Research Building (Left Side) */}
           <div
@@ -301,7 +250,7 @@ export function App() {
       )}
 
       {/* Sector 03 Click Targets: Frame ~570 */}
-      {isSector03InView && (
+      {isSector03InView && !cloudState.isCovering && !cloudState.isExiting && (
         <>
           {/* Connect Building (Left Side) */}
           <div
@@ -319,7 +268,7 @@ export function App() {
       )}
 
       {/* Sector 04 Click Target: Frame ~839 (Headquarters & Celestial Core) */}
-      {isCoreInView && (
+      {isCoreInView && !cloudState.isCovering && !cloudState.isExiting && (
         <div
           className="building-click-zone center-click-zone"
           onClick={() => handleEnterBuilding('headquarters')}
@@ -327,15 +276,6 @@ export function App() {
         />
       )}
 
-      {/* Interior HUD (Exit control) when inside any building */}
-      {viewMode === 'inside' && (
-        <div className="interior-hud">
-          <button className="interior-exit-btn" onClick={handleExitBuilding}>
-            <span className="btn-icon">←</span>
-            <span>RETURN TO STREET</span>
-          </button>
-        </div>
-      )}
 
       {/* Main scroll track for city navigation */}
       <div

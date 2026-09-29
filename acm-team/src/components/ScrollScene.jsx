@@ -340,6 +340,19 @@ export default function ScrollScene() {
               onCardMouseLeave={scheduleClose}
             />
           </div>
+          {isLive && (
+            <button
+              className="cocom-jump-link"
+              onClick={() => {
+                const el = document.getElementById('cocom');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              title="Scroll to Co-Committee members"
+            >
+              <span>EXPLORE CO-COMMITTEE (COCOM)</span>
+              <span className="cocom-jump-arrow">↓</span>
+            </button>
+          )}
         </div>
 
         <div
